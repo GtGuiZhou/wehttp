@@ -3,10 +3,11 @@
 ## 使用方式
 ```js
   const http = require('common/http.js')
-  http.get('www.baidu.com', res => {
+  http.get('http://www.baidu.com', res => {
     console.log(res)
   })
 ```
+
 
 ## 浅显易懂
   实现方式简单明了，一看就懂。
@@ -19,6 +20,5 @@
 ### 2018年10月13日 16点52分
 解决了刚开始请求时会话不同的问题，主要问题是一开始有多个异步请求时，cookie并不存在，因此服务器会给在cookie不存在这段时间的请求返回cookie，因此造成了cookie变换的问题，本次修改主要为让第一个异步请求先获取cookie，其它请求先等待，随后在执行其它请求。
 
-  
-<center>MIT Licensed | Copyright © 2018-present Gt-GuiZhou</center>
+MIT Licensed | Copyright © 2018-present Gt-GuiZhou
  
