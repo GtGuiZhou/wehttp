@@ -39,6 +39,7 @@ npm i wehttp
            console.log('已经上传的数据长度', res.totalBytesSent)
            console.log('预期需要上传的数据总长度', res.totalBytesExpectedToSend)
          })
+    $uploader.abort() // 同样可以取消上传的请求任务
 ```
 
 MIT Licensed | Copyright © 2018-present Gt-GuiZhou
