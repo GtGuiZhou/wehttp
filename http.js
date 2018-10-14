@@ -1,6 +1,6 @@
 // /**
 //  * Author: GT-GuiZhou
-//  * Date: 2018/10/13
+//  * Date: 2018/10/8
 //  * Email: 735311619@qq.com
 //  * WebSite: http://wehttp.guotao.pro
 //  * Desc: 在校大三学生，会ThinkPHP、Vue、小程序，有微信支付以及支付宝支付经验，求工作，求团队带。谢谢各位大佬~(*╹▽╹*)
@@ -12,28 +12,32 @@ module.exports = {
   requestQueue: [],
   lock: false,
 
-  get (url, fn = null, header = null) {
-    this.request(url, 'GET', null, fn, header)
+  get(url, fn = null, header = null) {
+    return this.request(url, 'GET', null, fn, header)
   },
 
-  delete (url, fn = null, header = null) {
-    this.request(url, 'DELETE', null, fn, header)
+  delete(url, fn = null, header = null) {
+    return this.request(url, 'DELETE', null, fn, header)
   },
 
-  head (url, fn = null, header = null) {
-    this.request(url, 'HEAD', null, fn, header)
+  head(url, fn = null, header = null) {
+    return this.request(url, 'HEAD', null, fn, header)
   },
 
-  post (url, data = null, fn = null, header = null) {
-    this.request(url, 'POST', data, fn, header)
+  post(url, data = null, fn = null, header = null) {
+    return this.request(url, 'POST', data, fn, header)
   },
 
-  put (url, data = null, fn = null, header = null) {
-    this.request(url, 'PUT', data, fn, header)
+  put(url, data = null, fn = null, header = null) {
+    return this.request(url, 'PUT', data, fn, header)
   },
 
-  patch (url, data = null, fn = null, header = null) {
-    this.request(url, 'PATCH', data, fn, header)
+  patch(url, data = null, fn = null, header = null) {
+    return this.request(url, 'PATCH', data, fn, header)
+  },
+
+  upload(url, filePath, fn = null, name = 'file', data = null,  header = null) {
+    return this.request(url, 'UPLOAD', data, fn, header, {filePath, name})
   },
 
   // 全局请求前置方法
@@ -50,15 +54,16 @@ module.exports = {
 
   /**
    * fn: 当他为方法时，默认其为成功处理方法，当为对象时可以在里面定义{success:fn,fail:fn,finally:fn,before:fn,after:fn}等处理方法
+   * plus: opt附加属性
    * lock: 是当第一个请求响应中没有cookie时，给第二个请求方法调用的解锁变量
    */
-  request (url, method, data = null, fn = null, header = null, lock = true) {
+  request(url, method, data = null, fn = null, header = null,plus = {}, lock = true) {
     // 在没有cookie锁住，先让请求进入队列，等待第一个请求执行完毕（如果没有第一个请求响应中没有cookie那么会继续调用第二个请求）
-    if (!this.cookie) { // 这只是最简单的锁，有极小的概率会出现锁失效的BUG，有更好的解决方案的朋友，劳烦指教。
+    if(!this.cookie){ // 这只是最简单的锁，有极小的概率会出现锁失效的BUG，有更好的解决方案的朋友，劳烦指教。
       // lock是为了能够让第一个请求不被放入队列
-      if (this.lock && lock) {
+      if (this.lock && lock){
         this.requestQueue.push({
-          url, method, data, fn, header
+          url, method, data, fn, header, plus
         })
         return
       } else {
@@ -66,9 +71,9 @@ module.exports = {
       }
     }
 
-    let opt = {}
+    let opt = plus?plus:{}
 
-    opt.header = header || {}
+    opt.header = header ? header : {}
     opt.data = data
     opt.header['Cookie'] = this.cookie
     opt.method = method
@@ -81,7 +86,8 @@ module.exports = {
     }
 
     opt.complete = res => {
-      if (res.header['Set-Cookie']) {
+      // upload是上传文件请求方法，该请求方法不存在响应头
+      if (res.errMsg.indexOf('upload') < 0 && res.header['Set-Cookie'] ) {
         this.cookie = res.header['Set-Cookie']
         // console.log(res.header['Set-Cookie'].toLowerCase().indexOf('session'))
         // console.log(res.header['Set-Cookie'].toLowerCase())
@@ -90,13 +96,13 @@ module.exports = {
         }
 
         this.requestQueue.forEach(item => {
-          this.request(item.url, item.method, item.data, item.fn, item.header) // 第一个请求获得cookie以后，将请求队列中的请求重新执行
+          this.request(item.url, item.method, item.data, item.fn, item.header, item.plus) // 第一个请求获得cookie以后，将请求队列中的请求重新执行
         })
       } else {
         // 这就说明第一个请求没有响应cookie，继续执行第二个请求
-        if (!this.cookie && this.requestQueue.length > 0) {
+        if (!this.cookie && this.requestQueue.length > 0){
           let two = this.requestQueue.shift() // 弹出队列
-          this.request(two.url, two.method, two.data, two.fn, two.header, false)
+          this.request(two.url, two.method, two.data, two.fn, two.header, two.plus, false)
         }
       }
     }
@@ -104,14 +110,20 @@ module.exports = {
     // 未定义方法时为空对象
     fn = fn == null ? {} : fn
     // 当fn为方法,默认为success处理方法
-    if (typeof fn === 'function') {
+    if (typeof fn == 'function') {
       fn = {
         success: fn
       }
     }
 
-    this.fnHandle(fn, 'before', opt)
-    wx.request(opt)
+    this.fnHandle(fn, 'before', opt) // 前置方法
+
+    if(method == 'UPLOAD'){
+      return wx.uploadFile(opt)
+    } else {
+      return wx.request(opt)
+    }
+
     // request是异步的，不能再这调用后置方法
     // this.fnHandle(fn, 'after', _res)
   },
@@ -121,7 +133,7 @@ module.exports = {
   //   否则
   // 2.如果this定义了全局方法就调用全局方法
   // res是响应结果或请求opt(具体请参考微信请求opt),key是方法名称
-  fnHandle (fn, key, res) {
+  fnHandle(fn, key, res) {
     // 传参success方法
     // if ('success' in fn) {
     //   fn.success(res)
@@ -145,12 +157,14 @@ module.exports = {
     // if(key == 'fail' && !(key in fn) && !this[key]){
     //     throw res
     // }
+
   },
 
   //  回调方法处理
-  callbackHandle (res, fn) {
+  callbackHandle(res, fn) {
+
     // 当用户使用对象定义了success、fail、finally任意一个方法时
-    if (typeof fn === 'object') {
+    if (typeof fn == 'object') {
       if (res.statusCode == 200) {
         // 请求成功时
         this.fnHandle(fn, 'success', res)
@@ -162,5 +176,6 @@ module.exports = {
       // 后置方法
       this.fnHandle(fn, 'after', res)
     }
+
   }
 }

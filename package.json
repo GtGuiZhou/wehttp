@@ -1,6 +1,6 @@
 {
   "name": "wehttp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WeHttp是一个简单的微信小程序网络请求工具，它简化了小程序的网络请求函数，并且拥有类似axios.interceptors的拦截器（分别是before和after），这意味着你可以在网络请求前、请求后执行自定义函数；另外您可以定义全局的处理方法（可定义success、fail、before、after）。并且wehttp会自动帮你保存cookie以此来维持会话",
   "main": "http.js",
   "scripts": {
